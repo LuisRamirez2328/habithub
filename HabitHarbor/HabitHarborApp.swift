@@ -1,4 +1,5 @@
 import SwiftUI
+import HabitCore
 
 @main
 struct HabitHarborApp: App {
