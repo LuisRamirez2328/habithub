@@ -96,7 +96,7 @@ final class StreakCalculatorTests: XCTestCase {
         let completed: Set<Date> = [
             duplicate,
             duplicate,
-            .init(year: 2026, month: 8, day: 11),
+            day(.init(year: 2026, month: 8, day: 11)),
         ]
         XCTAssertEqual(StreakCalculator.longestStreak(in: completed, calendar: calendar), 2)
     }
