@@ -3,13 +3,21 @@ import XCTest
 
 final class HabitStoreTests: XCTestCase {
 
-    private func makeTempStore() throws -> (HabitStore, URL) {
+    private func makeTempURL() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("habithub-tests-\(UUID().uuidString)")
             .appendingPathComponent("habits.json")
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )
+        return url
+    }
+
+    /// A store backed by a file containing an empty array, so it starts with
+    /// no habits (mirrors a user who has never added any).
+    private func makeEmptyStore() throws -> (HabitStore, URL) {
+        let url = try makeTempURL()
+        try "[]".write(to: url, atomically: true, encoding: .utf8)
         return (HabitStore(storageURL: url), url)
     }
 
@@ -20,7 +28,7 @@ final class HabitStoreTests: XCTestCase {
     // MARK: - CRUD
 
     func testAddAndDelete() throws {
-        let (store, url) = try makeTempStore()
+        let (store, url) = try makeEmptyStore()
         defer { cleanup(url) }
 
         XCTAssertEqual(store.habits.count, 0)
@@ -32,7 +40,7 @@ final class HabitStoreTests: XCTestCase {
     }
 
     func testToggleUpdatesTheHabit() throws {
-        let (store, url) = try makeTempStore()
+        let (store, url) = try makeEmptyStore()
         defer { cleanup(url) }
 
         let habit = Habit(title: "Run")
@@ -48,7 +56,7 @@ final class HabitStoreTests: XCTestCase {
     }
 
     func testUpdateReplacesHabit() throws {
-        let (store, url) = try makeTempStore()
+        let (store, url) = try makeEmptyStore()
         defer { cleanup(url) }
 
         var habit = Habit(title: "Draft")
@@ -63,7 +71,7 @@ final class HabitStoreTests: XCTestCase {
     // MARK: - Persistence
 
     func testPersistenceSurvivesStoreRecreation() throws {
-        let (store, url) = try makeTempStore()
+        let (store, url) = try makeEmptyStore()
         defer { cleanup(url) }
 
         var habit = Habit(title: "Persist me", emoji: "💾", weeklyGoal: 3)
@@ -77,15 +85,15 @@ final class HabitStoreTests: XCTestCase {
     }
 
     func testMissingFileSeedsSampleData() throws {
-        let (store, _) = try makeTempStore()
+        let url = try makeTempURL()
+        defer { cleanup(url) }
+
+        let store = HabitStore(storageURL: url)
         XCTAssertEqual(store.habits, Habit.samples)
     }
 
     func testCorruptFileFallsBackToSamples() throws {
-        let (_, url) = try makeTempStore()
-        try FileManager.default.createDirectory(
-            at: url.deletingLastPathComponent(), withIntermediateDirectories: true
-        )
+        let url = try makeTempURL()
         try "not valid json".write(to: url, atomically: true, encoding: .utf8)
         defer { cleanup(url) }
 
